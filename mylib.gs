@@ -5,10 +5,17 @@ function i18n (str) {
 // ===== bot about
 function identifyCmd (obj) {
   let cmd = 'none'
-  if (Array.isArray(obj.entities) && obj.entities.length > 0) {
-    // Have entities!
-    const ent = obj.entities
-    cmd = obj.text.substring(ent[0].offset, ent[0].length)
+  if (obj && typeof obj.text === 'string' && Array.isArray(obj.entities)) {
+    const ent = obj.entities.find(function (entity) {
+      return entity && entity.type === 'bot_command'
+        && Number.isInteger(entity.offset)
+        && Number.isInteger(entity.length)
+        && entity.offset >= 0
+        && entity.length > 0
+    })
+    if (ent && ent.offset + ent.length <= obj.text.length) {
+      cmd = obj.text.substring(ent.offset, ent.offset + ent.length)
+    }
   }
   return cmd
 }
