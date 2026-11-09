@@ -1,0 +1,13 @@
+# Local Apps Script project mapping (contains project-specific configuration)
+.clasp.json
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+secrets.*
+credentials.*
+
+# Common local tooling output
+node_modules/
+*.log
