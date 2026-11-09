@@ -34,7 +34,14 @@ function setState (stateVal, additionalVal = null) {
 }
 
 function getRequiredScriptProperty (propertyName) {
-  const value = PropertiesService.getScriptProperties().getProperty(propertyName)
+  let value
+  try {
+    value = PropertiesService.getScriptProperties().getProperty(propertyName)
+  } catch (err) {
+    const message = 'Unable to read Script Property: ' + propertyName
+    Logger.log(message)
+    throw new Error(message)
+  }
   if (typeof value !== 'string' || value.trim() === '') {
     const message = 'Missing required Script Property: ' + propertyName
     Logger.log(message)
@@ -44,11 +51,18 @@ function getRequiredScriptProperty (propertyName) {
 }
 
 function getBotConfig () {
-  const properties = PropertiesService.getScriptProperties()
-  const config = {
-    firebaseUrl: properties.getProperty('FIREBASE_URL'),
-    firebaseKey: properties.getProperty('FIREBASE_KEY'),
-    telegramBotToken: properties.getProperty('TELEGRAM_BOT_TOKEN')
+  let properties
+  let config
+  try {
+    properties = PropertiesService.getScriptProperties()
+    config = {
+      firebaseUrl: properties.getProperty('FIREBASE_URL'),
+      firebaseKey: properties.getProperty('FIREBASE_KEY'),
+      telegramBotToken: properties.getProperty('TELEGRAM_BOT_TOKEN')
+    }
+  } catch (err) {
+    Logger.log('Unable to read required Script Properties.')
+    throw new Error('Unable to read required Script Properties.')
   }
   const propertyNames = {
     firebaseUrl: 'FIREBASE_URL',
