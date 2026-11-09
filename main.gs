@@ -141,7 +141,7 @@ function parseTelegramUpdate (e) {
 }
 
 function isTelegramId (value) {
-  return (typeof value === 'number' && Number.isFinite(value))
+  return (typeof value === 'number' && Number.isInteger(value))
     || (typeof value === 'string' && /^-?\d+$/.test(value.trim()))
 }
 
