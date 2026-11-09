@@ -26,6 +26,18 @@ function doPost (e) {
     return webhookResponse()
   }
 
+  let isNewUpdate
+  try {
+    isNewUpdate = claimTelegramUpdate(obj.update_id)
+  } catch (err) {
+    Logger.log('Unable to record Telegram update id: ' + err.message)
+    return webhookResponse()
+  }
+  if (!isNewUpdate) {
+    Logger.log('Duplicate Telegram update ignored: ' + obj.update_id)
+    return webhookResponse()
+  }
+
   userObj = {
     uid: obj.message.from.id,
     cid: obj.message.chat.id,

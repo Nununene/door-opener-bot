@@ -72,6 +72,50 @@ function getBotConfig () {
   }
 }
 
+function claimTelegramUpdate (updateId) {
+  const lock = LockService.getScriptLock()
+  lock.waitLock(5000)
+  try {
+    const properties = PropertiesService.getScriptProperties()
+    const propertyName = 'PROCESSED_UPDATE_IDS'
+    const now = Date.now()
+    const retentionMs = 24 * 60 * 60 * 1000
+    const maxEntries = 100
+    let records = []
+    const storedValue = properties.getProperty(propertyName)
+
+    if (storedValue) {
+      try {
+        records = JSON.parse(storedValue)
+        if (!Array.isArray(records)) records = []
+      } catch (err) {
+        Logger.log('Invalid update de-duplication state; starting a fresh history.')
+        records = []
+      }
+    }
+
+    records = records.filter(function (record) {
+      return record
+        && typeof record.id === 'string'
+        && Number.isFinite(record.timestamp)
+        && now - record.timestamp < retentionMs
+    }).slice(-maxEntries)
+
+    const id = String(updateId)
+    if (records.some(function (record) { return record.id === id })) {
+      properties.setProperty(propertyName, JSON.stringify(records))
+      return false
+    }
+
+    records.push({ id: id, timestamp: now })
+    if (records.length > maxEntries) records.shift()
+    properties.setProperty(propertyName, JSON.stringify(records))
+    return true
+  } finally {
+    lock.releaseLock()
+  }
+}
+
 // ===== Telegram about
 function _sendExec (endpoint, payload) {
   UrlFetchApp.fetch(
