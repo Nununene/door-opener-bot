@@ -33,10 +33,49 @@ function setState (stateVal, additionalVal = null) {
   updateFBRecord(payload)
 }
 
+function getRequiredScriptProperty (propertyName) {
+  const value = PropertiesService.getScriptProperties().getProperty(propertyName)
+  if (typeof value !== 'string' || value.trim() === '') {
+    const message = 'Missing required Script Property: ' + propertyName
+    Logger.log(message)
+    throw new Error(message)
+  }
+  return value.trim()
+}
+
+function getBotConfig () {
+  const properties = PropertiesService.getScriptProperties()
+  const config = {
+    firebaseUrl: properties.getProperty('FIREBASE_URL'),
+    firebaseKey: properties.getProperty('FIREBASE_KEY'),
+    telegramBotToken: properties.getProperty('TELEGRAM_BOT_TOKEN')
+  }
+  const propertyNames = {
+    firebaseUrl: 'FIREBASE_URL',
+    firebaseKey: 'FIREBASE_KEY',
+    telegramBotToken: 'TELEGRAM_BOT_TOKEN'
+  }
+  const missing = Object.keys(config).filter(function (key) {
+    return typeof config[key] !== 'string' || config[key].trim() === ''
+  }).map(function (key) {
+    return propertyNames[key]
+  })
+  if (missing.length > 0) {
+    const message = 'Missing required Script Properties: ' + missing.join(', ')
+    Logger.log(message)
+    throw new Error(message)
+  }
+  return {
+    firebaseUrl: config.firebaseUrl.trim(),
+    firebaseKey: config.firebaseKey.trim(),
+    telegramBotToken: config.telegramBotToken.trim()
+  }
+}
+
 // ===== Telegram about
 function _sendExec (endpoint, payload) {
   UrlFetchApp.fetch(
-    'https://api.telegram.org/bot' + TG_KEY + '/' + endpoint,
+    'https://api.telegram.org/bot' + getRequiredScriptProperty('TELEGRAM_BOT_TOKEN') + '/' + endpoint,
     {
       "method": "post",
       "payload": payload
@@ -55,7 +94,10 @@ function stickerRand (stickerType) {
 
 // ===== Firebase about
 function getFBRecord () {
-  let fb = FirebaseApp.getDatabaseByUrl(FB_URL, FB_KEY);
+  let fb = FirebaseApp.getDatabaseByUrl(
+    getRequiredScriptProperty('FIREBASE_URL'),
+    getRequiredScriptProperty('FIREBASE_KEY')
+  )
   let myuser = fb.getData('bot1/' + userObj.uid);
   if (myuser) {
     if (myuser.tgname != userObj.fname) {
@@ -79,7 +121,10 @@ function getFBRecord () {
 }
 
 function updateFBRecord (val) {
-  let fb = FirebaseApp.getDatabaseByUrl(FB_URL, FB_KEY);
+  let fb = FirebaseApp.getDatabaseByUrl(
+    getRequiredScriptProperty('FIREBASE_URL'),
+    getRequiredScriptProperty('FIREBASE_KEY')
+  )
   fb.updateData('bot1/' + userObj.uid, val);
 }
 

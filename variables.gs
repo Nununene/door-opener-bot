@@ -1,6 +1,3 @@
-const FB_KEY = 'fb_key_here'           // Firebase key
-const FB_URL = 'https://my-door-opener-db.firebaseio.com'    // Firebase URL
-const TG_KEY = 'telegram_bot_token_here'     // Telegram bot token
 const DEFAULT_API_URL = 'https://myurl.example.com/mobileAPI.php'  // mobileAPI.php URL
 const MY_TG_ID = '@my_telegram_id' // Your Telegram ID for the link
 let myLocale = 'zh_TW'
@@ -44,6 +41,7 @@ const i18v = {
     'userStatIs': '使用者狀況如下',
     'cancelLastOperation': '動作取消',
     'invalidMessageFormat': '訊息格式錯誤',
+    'invalidBotConfig': '機器人參數錯誤',
     'errorCode2': '帳號密碼錯誤',
     'errorCode3': '權限不足',
     'errorCode4': '參數錯誤'
@@ -79,6 +77,7 @@ This robot need work with remote API to opening doors, for further information, 
     'userStatIs': 'User status is',
     'cancelLastOperation': 'Last command canceled',
     'invalidMessageFormat': 'Invalid message format.',
+    'invalidBotConfig': 'Bot configuration error.',
     'errorCode2': 'Account or Password error.',
     'errorCode3': 'Action denied.',
     'errorCode4': 'Argument error.'

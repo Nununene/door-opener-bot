@@ -15,6 +15,17 @@ function doPost (e) {
   }
 
   const obj = parsed.update
+  try {
+    getBotConfig()
+  } catch (err) {
+    try {
+      sendMessageToChat(obj.message.chat.id, i18n('invalidBotConfig'))
+    } catch (sendErr) {
+      Logger.log('Unable to send configuration error to Telegram: ' + sendErr.message)
+    }
+    return webhookResponse()
+  }
+
   userObj = {
     uid: obj.message.from.id,
     cid: obj.message.chat.id,
