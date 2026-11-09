@@ -1,80 +1,152 @@
 let userObj = {}
 
 function doPost (e) {
-  if(e && e.postData && e.postData.type == "application/json") {
-    var obj = JSON.parse(e.postData.contents);
-    userObj = {
-      uid: obj.message.from.id,
-      cid: obj.message.chat.id,
-      fname: obj.message.from.first_name,
-      uname: obj.message.from.username
-    }
-    let cmd = identifyCmd(obj.message)
-    let uData = getFBRecord();
-    if (uData) {
-      switch (uData.state) {
-        case 'settingName':
-          if (cmd === '/cancel') {
-            setState('')
-            sendMessage(i18n('cancelLastOperation'))
-          } else {
-            setState('', { uname: obj.message.text })
-            sendMessage(i18n('nameSetDone'))
-          }
-          break;
-        case 'settingPwd':
-          if (cmd === '/cancel') {
-            setState('')
-            sendMessage(i18n('cancelLastOperation'))
-          } else {
-            setState('', { upw: obj.message.text })
-            sendMessage(i18n('pwdSetDone'))
-          }
-          break;
-        case 'settingUrl':
-          if (cmd === '/cancel') {
-            setState('')
-            sendMessage(i18n('cancelLastOperation'))
-          } else {
-            const newUrl = (obj.message.text == 'none')
-              ? ''
-              : obj.message.text
-            setState('', { url: newUrl })
-            sendMessage(i18n('urlSetDone'))
-          }
-          break;
-        default:
-          // check if command
-          if (cmd !== 'none') {
-            // Command mode
-            executeCmd(cmd, uData, obj);
-          } else {
-            // sendMessage(i18n('welcomeBack') + '\n' + obj.message.from.first_name)
-            autoResponse(obj)
-          }
-          break;
+  const parsed = parseTelegramUpdate(e)
+  if (!parsed.ok) {
+    Logger.log('Invalid Telegram update: ' + parsed.reason)
+    if (parsed.chatId) {
+      try {
+        sendMessageToChat(parsed.chatId, i18n('invalidMessageFormat'))
+      } catch (err) {
+        Logger.log('Unable to send format error to Telegram: ' + err.message)
       }
-    } else {
-      sendMessage(i18n('newuser'))
-      sendSticker(stickerRand('welcome'))
-      sendMessage(i18n('welcomeInfo'))
     }
-    return true
-  } else {
-    Logger.log('Data format error, not JSON');
-    return false
+    return webhookResponse()
   }
+
+  const obj = parsed.update
+  userObj = {
+    uid: obj.message.from.id,
+    cid: obj.message.chat.id,
+    fname: obj.message.from.first_name || '',
+    uname: obj.message.from.username || ''
+  }
+  const cmd = identifyCmd(obj.message)
+  const uData = getFBRecord()
+  if (uData) {
+    switch (uData.state) {
+      case 'settingName':
+        if (cmd === '/cancel') {
+          setState('')
+          sendMessage(i18n('cancelLastOperation'))
+        } else if (typeof obj.message.text !== 'string') {
+          sendMessage(i18n('invalidMessageFormat'))
+        } else {
+          setState('', { uname: obj.message.text })
+          sendMessage(i18n('nameSetDone'))
+        }
+        break
+      case 'settingPwd':
+        if (cmd === '/cancel') {
+          setState('')
+          sendMessage(i18n('cancelLastOperation'))
+        } else if (typeof obj.message.text !== 'string') {
+          sendMessage(i18n('invalidMessageFormat'))
+        } else {
+          setState('', { upw: obj.message.text })
+          sendMessage(i18n('pwdSetDone'))
+        }
+        break
+      case 'settingUrl':
+        if (cmd === '/cancel') {
+          setState('')
+          sendMessage(i18n('cancelLastOperation'))
+        } else if (typeof obj.message.text !== 'string') {
+          sendMessage(i18n('invalidMessageFormat'))
+        } else {
+          const newUrl = (obj.message.text == 'none') ? '' : obj.message.text
+          setState('', { url: newUrl })
+          sendMessage(i18n('urlSetDone'))
+        }
+        break
+      default:
+        if (cmd !== 'none') {
+          executeCmd(cmd, uData, obj)
+        } else {
+          autoResponse(obj)
+        }
+        break
+    }
+  } else {
+    sendMessage(i18n('newuser'))
+    sendSticker(stickerRand('welcome'))
+    sendMessage(i18n('welcomeInfo'))
+  }
+  return webhookResponse()
+}
+
+function parseTelegramUpdate (e) {
+  if (!e || !e.postData || typeof e.postData.contents !== 'string') {
+    return { ok: false, reason: 'Missing request body' }
+  }
+  if (e.postData.type && !/^application\/json(?:\s*;|$)/i.test(e.postData.type)) {
+    return { ok: false, reason: 'Unexpected content type' }
+  }
+
+  let update
+  try {
+    update = JSON.parse(e.postData.contents)
+  } catch (err) {
+    return { ok: false, reason: 'Malformed JSON' }
+  }
+  if (!update || typeof update !== 'object' || Array.isArray(update)) {
+    return { ok: false, reason: 'Update must be a JSON object' }
+  }
+
+  const message = update.message
+  const chatId = getChatIdForError(update)
+  if (!message || typeof message !== 'object' || Array.isArray(message)) {
+    return { ok: false, reason: 'Update does not contain a message', chatId: chatId }
+  }
+  if (!message.chat || !isTelegramId(message.chat.id)) {
+    return { ok: false, reason: 'Message has no valid chat id', chatId: chatId }
+  }
+  if (!message.from || !isTelegramId(message.from.id)) {
+    return { ok: false, reason: 'Message has no valid sender id', chatId: message.chat.id }
+  }
+  if (message.text !== undefined && typeof message.text !== 'string') {
+    return { ok: false, reason: 'Message text must be a string', chatId: message.chat.id }
+  }
+  if (message.entities !== undefined && !Array.isArray(message.entities)) {
+    return { ok: false, reason: 'Message entities must be an array', chatId: message.chat.id }
+  }
+  if (!Number.isInteger(update.update_id) || update.update_id < 0) {
+    return { ok: false, reason: 'Update has no valid update_id', chatId: message.chat.id }
+  }
+
+  return { ok: true, update: update }
+}
+
+function isTelegramId (value) {
+  return (typeof value === 'number' && Number.isFinite(value))
+    || (typeof value === 'string' && /^-?\d+$/.test(value.trim()))
+}
+
+function getChatIdForError (update) {
+  const message = update.message
+    || update.edited_message
+    || update.channel_post
+    || update.edited_channel_post
+    || (update.callback_query && update.callback_query.message)
+  return message && message.chat && isTelegramId(message.chat.id)
+    ? message.chat.id
+    : null
+}
+
+function webhookResponse () {
+  return HtmlService.createHtmlOutput('OK')
 }
 
 function sendMessage (msg) {
-  _sendExec(
-    'sendMessage',
-    {
-      chat_id: userObj.cid + '',
-      text: msg,
-      parse_mode: 'Markdown'
-    }
-  )
+  sendMessageToChat(userObj.cid, msg)
+}
+
+function sendMessageToChat (chatId, msg) {
+  _sendExec('sendMessage', {
+    chat_id: String(chatId),
+    text: msg,
+    parse_mode: 'Markdown'
+  })
 }
 
 function sendSticker (sid) {

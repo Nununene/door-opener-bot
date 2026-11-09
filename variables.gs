@@ -43,6 +43,7 @@ const i18v = {
     'urlSpec': '自定主機位置',
     'userStatIs': '使用者狀況如下',
     'cancelLastOperation': '動作取消',
+    'invalidMessageFormat': '訊息格式錯誤',
     'errorCode2': '帳號密碼錯誤',
     'errorCode3': '權限不足',
     'errorCode4': '參數錯誤'
@@ -77,6 +78,7 @@ This robot need work with remote API to opening doors, for further information, 
     'urlSpec': 'User defined server address',
     'userStatIs': 'User status is',
     'cancelLastOperation': 'Last command canceled',
+    'invalidMessageFormat': 'Invalid message format.',
     'errorCode2': 'Account or Password error.',
     'errorCode3': 'Action denied.',
     'errorCode4': 'Argument error.'
